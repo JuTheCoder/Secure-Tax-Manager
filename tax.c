@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Defines one tax record
 typedef struct {
@@ -27,11 +28,68 @@ void initList(RecordList *list){
     }
 }
 
+void resizeList(RecordList *list) {
+    list->capacity *= 2;
+    list->records = realloc(list->records, list->capacity * sizeof(Record));
+
+    if (list->records == NULL){
+        printf("Memory reallocation failed\n");
+        exit(1);
+    }
+}
+
+// Creates a new record with a given category and amount depending on user input
+void addRecord(RecordList *list){
+    if(list->size == list->capacity){
+        resizeList(list);
+    }
+
+    printf("Enter category: ");
+    fgets(list->records[list->size].category, 50, stdin);
+
+    list->records[list->size].category[strcspn(list->records[list->size].category, "\n")] = '\0';
+
+    printf("Enter amount: ");
+    scanf("%f", &list->records[list->size].amount);
+    getchar();
+
+    list->size++;
+    printf("Record added!\n");
+}
+
+// Prints out all records in the dynamic list
+void viewRecords(RecordList *list){
+    if(list->size == 0){
+        printf("No records yet.\n");
+        return;
+    }
+
+    for(int i = 0; i < list->size; i++){
+        printf("%d. %s - %.2f\n", i + 1, list->records[i].category, list->records[i].amount);
+    }
+}
+
 int main(){
     RecordList list;
     initList(&list);
 
-    printf("Program started successfully.\n");
+    int choice;
+
+    do{
+        printf("\n1. Add Record\n");
+        printf("2. View Record\n");
+        printf("3. Exit\n");
+        printf("Choose: ");
+        scanf("%d", &choice);
+        getchar();
+
+        if(choice == 1){
+            addRecord(&list);
+        }
+        else if(choice == 2){
+            viewRecords(&list);
+        }
+    } while(choice != 3);
 
     free(list.records); // Prevents memory leaks
     return 0;
