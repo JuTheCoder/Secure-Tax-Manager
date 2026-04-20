@@ -69,6 +69,23 @@ void viewRecords(RecordList *list){
     }
 }
 
+// Saves the records that are stored in the dynamic list and stores them in the records.txt file
+void saveToFile(RecordList *list){
+    FILE *file = fopen("records.txt", "w");
+
+    if(file == NULL){
+        printf("Error opening file\n");
+        return;
+    }
+
+    for(int i = 0; i < list->size; i++){
+        fprintf(file, "%s %.2f\n", list->records[i].category, list->records[i].amount);
+    }
+
+    fclose(file);
+    printf("Records saved to file successfully.\n");
+}
+
 int main(){
     RecordList list;
     initList(&list);
@@ -78,7 +95,8 @@ int main(){
     do{
         printf("\n1. Add Record\n");
         printf("2. View Record\n");
-        printf("3. Exit\n");
+        printf("3. Save to File\n");
+        printf("4. Exit\n");
         printf("Choose: ");
         scanf("%d", &choice);
         getchar();
@@ -89,7 +107,10 @@ int main(){
         else if(choice == 2){
             viewRecords(&list);
         }
-    } while(choice != 3);
+        else if(choice == 3){
+            saveToFile(&list);
+        }
+    } while(choice != 4);
 
     free(list.records); // Prevents memory leaks
     return 0;
