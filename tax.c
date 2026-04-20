@@ -28,6 +28,7 @@ void initList(RecordList *list){
     }
 }
 
+// Expands the list if there are more than 2 records added
 void resizeList(RecordList *list) {
     list->capacity *= 2;
     list->records = realloc(list->records, list->capacity * sizeof(Record));
@@ -57,7 +58,7 @@ void addRecord(RecordList *list){
     printf("Record added!\n");
 }
 
-// Prints out all records in the dynamic list
+// Prints out all records in dynamic memory
 void viewRecords(RecordList *list){
     if(list->size == 0){
         printf("No records yet.\n");
@@ -69,7 +70,7 @@ void viewRecords(RecordList *list){
     }
 }
 
-// Saves the records that are stored in the dynamic list and stores them in the records.txt file
+// Saves the records that are stored in dynamic memory and stores them in the records.txt file
 void saveToFile(RecordList *list){
     FILE *file = fopen("records.txt", "w");
 
@@ -86,6 +87,29 @@ void saveToFile(RecordList *list){
     printf("Records saved to file successfully.\n");
 }
 
+// Opens the saved file, reads each record one by one, and then stores it back into dynamic memory
+void loadFromFile(RecordList *list){
+    FILE *file = fopen("records.txt", "r");
+
+    if(file == NULL){
+        printf("Error opening file\n");
+        return;
+    }
+
+    list->size = 0;
+
+    while(fscanf(file, "%49s %f", list->records[list->size].category, &list->records[list->size].amount) == 2){
+        list->size++;
+
+        if(list->size == list->capacity){
+            resizeList(list);
+        }
+    }
+
+    fclose(file);
+    printf("Records loaded from file successfully.\n");
+}
+
 int main(){
     RecordList list;
     initList(&list);
@@ -96,7 +120,8 @@ int main(){
         printf("\n1. Add Record\n");
         printf("2. View Record\n");
         printf("3. Save to File\n");
-        printf("4. Exit\n");
+        printf("4. Load from File\n");
+        printf("5. Exit\n");
         printf("Choose: ");
         scanf("%d", &choice);
         getchar();
@@ -110,7 +135,10 @@ int main(){
         else if(choice == 3){
             saveToFile(&list);
         }
-    } while(choice != 4);
+        else if(choice == 4){
+            loadFromFile(&list);
+        }
+    } while(choice != 5);
 
     free(list.records); // Prevents memory leaks
     return 0;
