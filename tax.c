@@ -110,6 +110,16 @@ void loadFromFile(RecordList *list){
     printf("Records loaded from file successfully.\n");
 }
 
+// Calculates the overall total of each record
+void calculateTotal(RecordList *list){
+    float total = 0;
+
+    for(int i = 0; i < list->size; i++){
+        total += list->records[i].amount;
+    }
+    printf("Total amount: %.2f\n", total);
+}
+
 int main(){
     RecordList list;
     initList(&list);
@@ -121,7 +131,8 @@ int main(){
         printf("2. View Record\n");
         printf("3. Save to File\n");
         printf("4. Load from File\n");
-        printf("5. Exit\n");
+        printf("5. Calculate Total\n");
+        printf("6. Exit\n");
         printf("Choose: ");
         scanf("%d", &choice);
         getchar();
@@ -138,7 +149,10 @@ int main(){
         else if(choice == 4){
             loadFromFile(&list);
         }
-    } while(choice != 5);
+        else if(choice == 5){
+            calculateTotal(&list);
+        }
+    } while(choice != 6);
 
     free(list.records); // Prevents memory leaks
     return 0;
