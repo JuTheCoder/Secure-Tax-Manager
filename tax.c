@@ -21,7 +21,8 @@ void initList(RecordList *list){
     list->capacity = 2;
     list->records = malloc(list->capacity * sizeof(Record)); // Allocates memory for 2 records
 
-    // Checking if memory allocation failed
+    // Checking if malloc faild to prevent dereferencing a NULL pointer
+    // which can cause a crash or undefined behavior
     if(list->records == NULL){
         printf("Memory allocation failed\n");
         exit(1);
@@ -41,18 +42,49 @@ void resizeList(RecordList *list) {
 
 // Creates a new record with a given category and amount depending on user input
 void addRecord(RecordList *list){
+    char input[100];
+
     if(list->size == list->capacity){
         resizeList(list);
     }
 
     printf("Enter category: ");
-    fgets(list->records[list->size].category, 50, stdin);
 
+    // Using fgets + sscanf instead of scanf to prevent input issues
+    // scanf can leave leftover characters in the buffer or crash on invalid input
+    // fgets reads the full line safely, and sscanf lets us validate the input
+    if(fgets(input, sizeof(input), stdin) == NULL){
+        printf("Error reading category\n");
+        return;
+    }
+
+    // Remove newline character safely
+    input[strcspn(input, "\n")] = '\0';
+
+    // Prevent empty input which could cause logic errors later
+    if(strlen(input) == 0){
+        printf("Category cannot be empty\n");
+        return;
+    }
+
+    // Copying the users input string into the category field (-1 to prevent buffer overflow)
+    strncpy(list->records[list->size].category, input, sizeof(list->records[list->size].category) - 1);
     list->records[list->size].category[strcspn(list->records[list->size].category, "\n")] = '\0';
 
     printf("Enter amount: ");
-    scanf("%f", &list->records[list->size].amount);
-    getchar();
+    // fgets is used instead of unsafe functions like gets() to prevent buffer overflow
+    // It limits input size and avoids writing past allocated memory
+    if(fgets(input, sizeof(input), stdin) == NULL){
+        printf("Error reading amount\n");
+        return;
+    }
+
+    // Validate numeric input to prevent invalid data
+    // sscanf returns 1 only if a valid float is read
+    if(sscanf(input, "%f", &list->records[list->size].amount) != 1){
+        printf("Invalid amount\n");
+        return;
+    }
 
     list->size++;
     printf("Record added!\n");
@@ -123,7 +155,7 @@ void calculateTotal(RecordList *list){
 int main(){
     RecordList list;
     initList(&list);
-
+    char input[100];
     int choice;
 
     do{
@@ -134,8 +166,17 @@ int main(){
         printf("5. Calculate Total\n");
         printf("6. Exit\n");
         printf("Choose: ");
-        scanf("%d", &choice);
-        getchar();
+        
+        // Using fgets and sscanf to safely read and validate user input, preventing buffer issues and invalid input crashes.
+        if(fgets(input, sizeof(input), stdin) == NULL) {
+            printf("Error reading menu choice\n");
+            continue;
+        }
+
+        if(sscanf(input, "%d", &choice) != 1){
+            printf("Invalid menu choice\n");
+            continue;
+        }
 
         if(choice == 1){
             addRecord(&list);
