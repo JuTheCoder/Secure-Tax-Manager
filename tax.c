@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 // Defines one tax record
 typedef struct {
+    char type[50];
     char category[50];
     float amount;
 } Record;
@@ -43,9 +45,27 @@ void resizeList(RecordList *list) {
 // Creates a new record with a given category and amount depending on user input
 void addRecord(RecordList *list){
     char input[100];
+    char test1[] = "Income";
+    char test2[] = "Expense";
 
     if(list->size == list->capacity){
         resizeList(list);
+    }
+
+    printf("Enter type of record (income or expense): ");
+
+    if(fgets(input, sizeof(input), stdin) == NULL){
+        printf("Error reading type");
+        return;
+    }
+
+    input[0] = toupper((unsigned char)input[0]);
+
+    input[strcspn(input, "\n")] = '\0';
+
+    if((strncmp(test1, input, sizeof(test1) - 1) == 0) || (strncmp(test2, input, sizeof(test2) - 1) == 0)){
+        strncpy(list->records[list->size].type, input, sizeof(list->records[list->size].type) - 1);
+        list->records[list->size].type[strcspn(list->records[list->size].type, "\n")] = '\0';
     }
 
     printf("Enter category: ");
@@ -57,6 +77,8 @@ void addRecord(RecordList *list){
         printf("Error reading category\n");
         return;
     }
+
+    input[0] = toupper((unsigned char)input[0]);
 
     // Remove newline character safely
     input[strcspn(input, "\n")] = '\0';
@@ -98,7 +120,7 @@ void viewRecords(RecordList *list){
     }
 
     for(int i = 0; i < list->size; i++){
-        printf("%d. %s - %.2f\n", i + 1, list->records[i].category, list->records[i].amount);
+        printf("%d. %s: %s - %.2f\n", i + 1, list->records[i].type, list->records[i].category, list->records[i].amount);
     }
 }
 
@@ -112,7 +134,7 @@ void saveToFile(RecordList *list){
     }
 
     for(int i = 0; i < list->size; i++){
-        fprintf(file, "%s %.2f\n", list->records[i].category, list->records[i].amount);
+        fprintf(file, "%s %s %.2f\n", list->records[i].type, list->records[i].category, list->records[i].amount);
     }
 
     fclose(file);
@@ -130,7 +152,7 @@ void loadFromFile(RecordList *list){
 
     list->size = 0;
 
-    while(fscanf(file, "%49s %f", list->records[list->size].category, &list->records[list->size].amount) == 2){
+    while(fscanf(file, "%49s %49s %f", list->records[list->size].type, list->records[list->size].category, &list->records[list->size].amount) == 3){
         list->size++;
 
         if(list->size == list->capacity){
