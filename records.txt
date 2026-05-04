@@ -1,2 +1,6 @@
-Income Salary 20000.00
-Income Check 1982.64
+Expense Food 25.00
+Income Salary 10000.00
+Income Salary 50000.00
+Expense School 2000.00
+Expense Medical 1000.00
+Expense Food 3000.00

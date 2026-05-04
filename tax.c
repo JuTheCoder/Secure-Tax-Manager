@@ -2,26 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "record.h"
+#include "tax_logic.h"
+#include "utils.h"
 
-// Defines one tax record
-typedef struct {
-    char type[50];
-    char category[50];
-    float amount;
-} Record;
-
-// Dynamic list for records
-typedef struct {
-    Record *records;
-    int size;
-    int capacity;
-} RecordList;
+#define INITIAL_CAPACITY 5
+#define MAX_TEXT_SIZE 50
+#define MAX_INPUT_SIZE 100
+#define MAX_AMOUNT 1000000000.0f
+#define TAX_RATE 0.10f
+#define MAX_TOTAL 1000000000.0f
 
 // Sets up the list so it can store records (allows space for 2 records initially)
 void initList(RecordList *list){
     list->size = 0;
-    list->capacity = 2;
-    list->records = malloc(list->capacity * sizeof(Record)); // Allocates memory for 2 records
+    list->capacity = INITIAL_CAPACITY;
+    list->records = malloc(INITIAL_CAPACITY * sizeof(Record)); // Allocates memory for 2 records
 
     // Checking if malloc faild to prevent dereferencing a NULL pointer
     // which can cause a crash or undefined behavior
@@ -33,20 +29,41 @@ void initList(RecordList *list){
 
 // Expands the list if there are more than 2 records added
 void resizeList(RecordList *list) {
-    list->capacity *= 2;
-    list->records = realloc(list->records, list->capacity * sizeof(Record));
+    int newCapacity = list->capacity * 2;
 
-    if (list->records == NULL){
+    if (newCapacity <= list->capacity) {
+        printf("Capacity overflow detected\n");
+        exit(1);
+    }
+
+    Record *temp = realloc(list->records, newCapacity * sizeof(Record));
+
+    if (temp == NULL){
         printf("Memory reallocation failed\n");
         exit(1);
+    }
+
+    list->records = temp;
+    list->capacity = newCapacity;
+}
+
+void removeNewline(char *input) {
+    input[strcspn(input, "\n")] = '\0';
+}
+
+void toLowerCase(char *str) {
+    if (str == NULL) {
+        return;
+    }
+
+    for (int i = 0; str[i] != '\0'; i++) {
+        str[i] = tolower((unsigned char)str[i]);
     }
 }
 
 // Creates a new record with a given category and amount depending on user input
 void addRecord(RecordList *list){
-    char input[100];
-    char test1[] = "Income";
-    char test2[] = "Expense";
+    char input[MAX_INPUT_SIZE];
 
     if(list->size == list->capacity){
         resizeList(list);
@@ -59,14 +76,20 @@ void addRecord(RecordList *list){
         return;
     }
 
-    input[0] = toupper((unsigned char)input[0]);
+    removeNewline(input);
 
-    input[strcspn(input, "\n")] = '\0';
-
-    if((strncmp(test1, input, sizeof(test1) - 1) == 0) || (strncmp(test2, input, sizeof(test2) - 1) == 0)){
-        strncpy(list->records[list->size].type, input, sizeof(list->records[list->size].type) - 1);
-        list->records[list->size].type[strcspn(list->records[list->size].type, "\n")] = '\0';
+    if (!equalsIgnoreCase(input, "Income") && !equalsIgnoreCase(input, "Expense")) {
+        printf("Invalid type. Please enter Income or Expense.\n");
+        return;
     }
+
+    if (equalsIgnoreCase(input, "Income")) {
+        strncpy(list->records[list->size].type, "Income", sizeof(list->records[list->size].type) - 1);
+    }
+    else{
+        strncpy(list->records[list->size].type, "Expense", sizeof(list->records[list->size].type) - 1);
+    }
+    list->records[list->size].type[sizeof(list->records[list->size].type) - 1] = '\0';
 
     printf("Enter category: ");
 
@@ -81,7 +104,7 @@ void addRecord(RecordList *list){
     input[0] = toupper((unsigned char)input[0]);
 
     // Remove newline character safely
-    input[strcspn(input, "\n")] = '\0';
+    removeNewline(input);
 
     // Prevent empty input which could cause logic errors later
     if(strlen(input) == 0){
@@ -89,9 +112,11 @@ void addRecord(RecordList *list){
         return;
     }
 
+    input[0] = toupper((unsigned char)input[0]);
+
     // Copying the users input string into the category field (-1 to prevent buffer overflow)
     strncpy(list->records[list->size].category, input, sizeof(list->records[list->size].category) - 1);
-    list->records[list->size].category[strcspn(list->records[list->size].category, "\n")] = '\0';
+    list->records[list->size].category[ sizeof(list->records[list->size].category) - 1] = '\0';
 
     printf("Enter amount: ");
     // fgets is used instead of unsafe functions like gets() to prevent buffer overflow
@@ -108,6 +133,11 @@ void addRecord(RecordList *list){
         return;
     }
 
+    if (list->records[list->size].amount < 0 || list->records[list->size].amount > MAX_AMOUNT) {
+        printf("Invalid amount range\n");
+        return;
+    }
+
     list->size++;
     printf("Record added!\n");
 }
@@ -119,14 +149,16 @@ void viewRecords(RecordList *list){
         return;
     }
 
+    printf("\nRecords:\n");
+
     for(int i = 0; i < list->size; i++){
         printf("%d. %s: %s - %.2f\n", i + 1, list->records[i].type, list->records[i].category, list->records[i].amount);
     }
 }
 
 // Saves the records that are stored in dynamic memory and stores them in the records.txt file
-void saveToFile(RecordList *list){
-    FILE *file = fopen("records.txt", "w");
+void saveToFile(const RecordList *list, const char *filename){
+    FILE *file = fopen(filename, "w");
 
     if(file == NULL){
         printf("Error opening file\n");
@@ -142,8 +174,8 @@ void saveToFile(RecordList *list){
 }
 
 // Opens the saved file, reads each record one by one, and then stores it back into dynamic memory
-void loadFromFile(RecordList *list){
-    FILE *file = fopen("records.txt", "r");
+void loadFromFile(RecordList *list, const char *filename){
+    FILE *file = fopen(filename, "r");
 
     if(file == NULL){
         printf("Error opening file\n");
@@ -152,97 +184,221 @@ void loadFromFile(RecordList *list){
 
     list->size = 0;
 
-    while(fscanf(file, "%49s %49s %f", list->records[list->size].type, list->records[list->size].category, &list->records[list->size].amount) == 3){
-        list->size++;
-
-        if(list->size == list->capacity){
+    while(1){
+        if (list->size == list->capacity) {
             resizeList(list);
         }
+
+        int result = fscanf(file, "%49s %49s %f", list->records[list->size].type, list->records[list->size].category, &list->records[list->size].amount);
+
+        if (result == EOF) {
+            break;
+        }
+
+        if (result != 3) {
+            printf("Invalid record format in file\n");
+            break;
+        }
+
+        list->size++;
     }
 
     fclose(file);
     printf("Records loaded from file successfully.\n");
 }
 
-// Calculates the overall total of each record
-void calculateTotal(RecordList *list){
-    float total = 0;
+void deleteRecord(RecordList *list) {
+    char input[100];
+    int recordNumber;
 
-    for(int i = 0; i < list->size; i++){
-        total += list->records[i].amount;
-    }
-    printf("Total amount: %.2f\n", total);
-}
-
-void financialSummary(RecordList *list){
-    float incomeTotal = 0;
-    float expenseTotal = 0;
-
-    for (int i = 0; i < list->size; i++){
-        if(strcmp(list->records[i].type, "Income") == 0){
-            incomeTotal += list->records[i].amount;
-        }
-        else if(strcmp(list->records[i].type, "Expense") == 0){
-            expenseTotal += list->records[i].amount;
-        }
-    }
-
-    float net = incomeTotal - expenseTotal;
-
-    printf("\n-- Financial Summary --\n");
-    printf("Total Income: %.2f\n", incomeTotal);
-    printf("Total Expenses: %.2f\n", expenseTotal);
-    printf("Net Amount: %.2f\n", net);
-}
-
-void calculateTax(RecordList *list){
-    float incomeTotal = 0;
-    float expenseTotal = 0;
-    float netAmount;
-    float taxRate = 0.10;
-    float taxOwed;
-
-    for(int i = 0; i < list->size; i++){
-        if(strcmp(list->records[i].type, "Income") == 0){
-            incomeTotal += list->records[i].amount;
-        }
-        else if(strcmp(list->records[i].type, "Expense") == 0){
-            expenseTotal += list->records[i].amount;
-        }
-    }
-
-    netAmount = incomeTotal - expenseTotal;
-
-    if(netAmount <= 0){
-        printf("\nNo taxable income.\n");
-        printf("Net Amount: %.2f\n", netAmount);
+    if (list == NULL || list->records == NULL) {
+        printf("Error: Invalid record list.\n");
         return;
     }
 
-    taxOwed = netAmount * taxRate;
+    if (list->size == 0) {
+        printf("No records to delete.\n");
+        return;
+    }
 
-    printf("\n-- Tax Estimate --\n");
-    printf("Total Income: %.2f\n", incomeTotal);
-    printf("Total Expenses: %.2f\n", expenseTotal);
-    printf("Taxable Amount: %.2f\n", netAmount);
-    printf("Estimated Tax Owed at 10%%: %.2f\n", taxOwed);
+    viewRecords(list);
+
+    printf("Enter record number to delete: ");
+
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("Error reading record number.\n");
+        return;
+    }
+
+    if (sscanf(input, "%d", &recordNumber) != 1) {
+        printf("Invalid record number.\n");
+        return;
+    }
+
+    if (recordNumber < 1 || recordNumber > list->size) {
+        printf("Record number out of range.\n");
+        return;
+    }
+
+    int index = recordNumber - 1;
+
+    for (int i = index; i < list->size - 1; i++) {
+        list->records[i] = list->records[i + 1];
+    }
+
+    list->size--;
+
+    printf("Record deleted successfully.\n");
 }
 
-int main(){
-    RecordList list;
-    initList(&list);
+void editRecord(RecordList *list) {
     char input[100];
-    int choice;
+    int recordNumber;
+    int index;
+    float newAmount;
+
+    if (list == NULL || list->records == NULL) {
+        printf("Error: Invalid record list.\n");
+        return;
+    }
+
+    if (list->size == 0) {
+        printf("No records to edit.\n");
+        return;
+    }
+
+    viewRecords(list);
+
+    printf("Enter record number to edit: ");
+
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("Error reading record number.\n");
+        return;
+    }
+
+    if (sscanf(input, "%d", &recordNumber) != 1) {
+        printf("Invalid record number.\n");
+        return;
+    }
+
+    if (recordNumber < 1 || recordNumber > list->size) {
+        printf("Record number out of range.\n");
+        return;
+    }
+
+    index = recordNumber - 1;
+
+    printf("Enter new type Income or Expense: ");
+
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("Error reading type.\n");
+        return;
+    }
+
+    input[strcspn(input, "\n")] = '\0';
+
+    if (input[0] != '\0') {
+        input[0] = toupper((unsigned char)input[0]);
+    }
+
+    if (strcmp(input, "Income") != 0 && strcmp(input, "Expense") != 0) {
+        printf("Invalid type. Must be Income or Expense.\n");
+        return;
+    }
+
+    strncpy(list->records[index].type, input,
+            sizeof(list->records[index].type) - 1);
+    list->records[index].type[
+        sizeof(list->records[index].type) - 1
+    ] = '\0';
+
+    printf("Enter new category: ");
+
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("Error reading category.\n");
+        return;
+    }
+
+    input[strcspn(input, "\n")] = '\0';
+
+    if (strlen(input) == 0) {
+        printf("Category cannot be empty.\n");
+        return;
+    }
+
+    strncpy(list->records[index].category, input,
+            sizeof(list->records[index].category) - 1);
+    list->records[index].category[
+        sizeof(list->records[index].category) - 1
+    ] = '\0';
+
+    printf("Enter new amount: ");
+
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("Error reading amount.\n");
+        return;
+    }
+
+    if (sscanf(input, "%f", &newAmount) != 1) {
+        printf("Invalid amount.\n");
+        return;
+    }
+
+    if (newAmount < 0 || newAmount > MAX_AMOUNT) {
+        printf("Invalid amount range.\n");
+        return;
+    }
+
+    list->records[index].amount = newAmount;
+
+    printf("Record updated successfully.\n");
+}
+
+// Calculates the overall total of each record
+void calculateTotal(const RecordList *list){
+    float incomeTotal = 0.0f;
+    float expenseTotal = 0.0f;
+
+    for (int i = 0; i < list->size; i++) {
+        if (strncmp(list->records[i].type, "Income", sizeof("Income")) == 0) {
+            incomeTotal += list->records[i].amount;
+        } else if (strncmp(list->records[i].type, "Expense", sizeof("Expense")) == 0) {
+            expenseTotal += list->records[i].amount;
+        }
+    }
+
+    printf("\nIncome Total: %.2f\n", incomeTotal);
+    printf("Expense Total: %.2f\n", expenseTotal);
+    printf("Net Total: %.2f\n", incomeTotal - expenseTotal);
+}
+
+int main(int argc, char *argv[]){
+    RecordList list;
+    const char *filename = "records.txt";
+    initList(&list);
+    char input[MAX_INPUT_SIZE];
+    int choice = 0;
+
+    if(argc > 2){
+        printf("Usage: %s [records_file]\n", argv[0]);
+        return 1;
+    }
+
+    if(argc == 2){
+        filename = argv[1];
+    }
 
     do{
+        printf("\nUsing file: %s\n", filename);
         printf("\n1. Add Record\n");
         printf("2. View Record\n");
         printf("3. Save to File\n");
         printf("4. Load from File\n");
-        printf("5. Calculate Total\n");
-        printf("6. Financial Summary\n");
-        printf("7. Calculate Tax\n");
-        printf("8. Exit\n");
+        printf("5. Delete Record\n");
+        printf("6. Edit Record\n");
+        printf("7. Calculate Total\n");
+        printf("8. Calculate Tax\n");
+        printf("9. Exit\n");
         printf("Choose: ");
         
         // Using fgets and sscanf to safely read and validate user input, preventing buffer issues and invalid input crashes.
@@ -263,21 +419,24 @@ int main(){
             viewRecords(&list);
         }
         else if(choice == 3){
-            saveToFile(&list);
+            saveToFile(&list, filename);
         }
         else if(choice == 4){
-            loadFromFile(&list);
+            loadFromFile(&list, filename);
         }
         else if(choice == 5){
-            calculateTotal(&list);
+            deleteRecord(&list);
         }
         else if(choice == 6){
-            financialSummary(&list);
+            editRecord(&list);
         }
         else if(choice == 7){
+            calculateTotal(&list);
+        }
+        else if(choice == 8){
             calculateTax(&list);
         }
-    } while(choice != 8);
+    } while(choice != 9);
 
     free(list.records); // Prevents memory leaks
     return 0;
