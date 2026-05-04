@@ -174,6 +174,60 @@ void calculateTotal(RecordList *list){
     printf("Total amount: %.2f\n", total);
 }
 
+void financialSummary(RecordList *list){
+    float incomeTotal = 0;
+    float expenseTotal = 0;
+
+    for (int i = 0; i < list->size; i++){
+        if(strcmp(list->records[i].type, "Income") == 0){
+            incomeTotal += list->records[i].amount;
+        }
+        else if(strcmp(list->records[i].type, "Expense") == 0){
+            expenseTotal += list->records[i].amount;
+        }
+    }
+
+    float net = incomeTotal - expenseTotal;
+
+    printf("\n-- Financial Summary --\n");
+    printf("Total Income: %.2f\n", incomeTotal);
+    printf("Total Expenses: %.2f\n", expenseTotal);
+    printf("Net Amount: %.2f\n", net);
+}
+
+void calculateTax(RecordList *list){
+    float incomeTotal = 0;
+    float expenseTotal = 0;
+    float netAmount;
+    float taxRate = 0.10;
+    float taxOwed;
+
+    for(int i = 0; i < list->size; i++){
+        if(strcmp(list->records[i].type, "Income") == 0){
+            incomeTotal += list->records[i].amount;
+        }
+        else if(strcmp(list->records[i].type, "Expense") == 0){
+            expenseTotal += list->records[i].amount;
+        }
+    }
+
+    netAmount = incomeTotal - expenseTotal;
+
+    if(netAmount <= 0){
+        printf("\nNo taxable income.\n");
+        printf("Net Amount: %.2f\n", netAmount);
+        return;
+    }
+
+    taxOwed = netAmount * taxRate;
+
+    printf("\n-- Tax Estimate --\n");
+    printf("Total Income: %.2f\n", incomeTotal);
+    printf("Total Expenses: %.2f\n", expenseTotal);
+    printf("Taxable Amount: %.2f\n", netAmount);
+    printf("Estimated Tax Owed at 10%%: %.2f\n", taxOwed);
+}
+
 int main(){
     RecordList list;
     initList(&list);
@@ -186,7 +240,9 @@ int main(){
         printf("3. Save to File\n");
         printf("4. Load from File\n");
         printf("5. Calculate Total\n");
-        printf("6. Exit\n");
+        printf("6. Financial Summary\n");
+        printf("7. Calculate Tax\n");
+        printf("8. Exit\n");
         printf("Choose: ");
         
         // Using fgets and sscanf to safely read and validate user input, preventing buffer issues and invalid input crashes.
@@ -215,7 +271,13 @@ int main(){
         else if(choice == 5){
             calculateTotal(&list);
         }
-    } while(choice != 6);
+        else if(choice == 6){
+            financialSummary(&list);
+        }
+        else if(choice == 7){
+            calculateTax(&list);
+        }
+    } while(choice != 8);
 
     free(list.records); // Prevents memory leaks
     return 0;
