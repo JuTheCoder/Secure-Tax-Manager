@@ -372,6 +372,92 @@ void calculateTotal(const RecordList *list){
     printf("Net Total: %.2f\n", incomeTotal - expenseTotal);
 }
 
+void addRecordManual(RecordList *list, const char *type, const char *category, float amount) {
+    if (list->size == list->capacity) {
+        resizeList(list);
+    }
+
+    strncpy(list->records[list->size].type, type, sizeof(list->records[list->size].type) - 1);
+    list->records[list->size].type[sizeof(list->records[list->size].type) - 1] = '\0';
+
+    strncpy(list->records[list->size].category, category, sizeof(list->records[list->size].category) - 1);
+    list->records[list->size].category[sizeof(list->records[list->size].category) - 1] = '\0';
+
+    list->records[list->size].amount = amount;
+    list->size++;
+}
+
+void clearList(RecordList *list) {
+    list->size = 0;
+}
+
+void runTestCase(RecordList *list, const char *testName) {
+    printf("\n=== %s ===\n", testName);
+    calculateTax(list);
+}
+
+void runInputPartitionTests() {
+    RecordList testList;
+    initList(&testList);
+
+    // TC1: Input Partition I > E
+    addRecordManual(&testList, "Income", "Salary", 1000);
+    addRecordManual(&testList, "Expense", "Food", 200);
+    runTestCase(&testList, "TC1: Income > Expenses");
+    clearList(&testList);
+
+    // TC2: Input Partition I = E
+    addRecordManual(&testList, "Income", "Salary", 500);
+    addRecordManual(&testList, "Expense", "Food", 500);
+    runTestCase(&testList, "TC2: Income = Expenses");
+    clearList(&testList);
+
+    // TC3: Input Partition I < E
+    addRecordManual(&testList, "Income", "Salary", 300);
+    addRecordManual(&testList, "Expense", "Food", 700);
+    runTestCase(&testList, "TC3: Income < Expenses");
+    clearList(&testList);
+
+    // TC4: Input Partition I only
+    addRecordManual(&testList, "Income", "Salary", 1000);
+    runTestCase(&testList, "TC4: Only Income");
+    clearList(&testList);
+
+    // TC5: Input Partition E only
+    addRecordManual(&testList, "Expense", "Food", 200);
+    runTestCase(&testList, "TC5: Only Expenses");
+    clearList(&testList);
+
+    // TC6: Input Partition empty list
+    runTestCase(&testList, "TC6: Empty Record List");
+
+    // CACC TC1: A true, B false
+    // incomeTotal > 0 is true
+    // deductibleTotal > incomeTotal * 0.80 is false
+    addRecordManual(&testList, "Income", "Salary", 1000);
+    addRecordManual(&testList, "Expense", "Medical", 700);
+    runTestCase(&testList, "CACC TC1: Income exists, deductions below 80%");
+    clearList(&testList);
+
+    // CACC TC2: A true, B true
+    // incomeTotal > 0 is true
+    // deductibleTotal > incomeTotal * 0.80 is true
+    addRecordManual(&testList, "Income", "Salary", 1000);
+    addRecordManual(&testList, "Expense", "Medical", 850);
+    runTestCase(&testList, "CACC TC2: Income exists, deductions above 80%");
+    clearList(&testList);
+
+    // CACC TC3: A false
+    // incomeTotal > 0 is false
+    addRecordManual(&testList, "Expense", "Medical", 200);
+    runTestCase(&testList, "CACC TC3: No income");
+    clearList(&testList);
+
+    free(testList.records);
+}
+
+
+
 int main(int argc, char *argv[]){
     RecordList list;
     const char *filename = "records.txt";
@@ -398,7 +484,8 @@ int main(int argc, char *argv[]){
         printf("6. Edit Record\n");
         printf("7. Calculate Total\n");
         printf("8. Calculate Tax\n");
-        printf("9. Exit\n");
+        printf("9. Testing\n");
+        printf("10. Exit\n");
         printf("Choose: ");
         
         // Using fgets and sscanf to safely read and validate user input, preventing buffer issues and invalid input crashes.
@@ -436,7 +523,11 @@ int main(int argc, char *argv[]){
         else if(choice == 8){
             calculateTax(&list);
         }
-    } while(choice != 9);
+        else if(choice == 9){
+            runInputPartitionTests();
+            break;
+        }
+    } while(choice != 10);
 
     free(list.records); // Prevents memory leaks
     return 0;

@@ -46,7 +46,7 @@ void calculateTax(RecordList *list) {
         }
     }
 
-    taxableIncome = incomeTotal - deductibleTotal;
+    taxableIncome = incomeTotal - expenseTotal;
 
     if (taxableIncome <= 0) {
         printf("\n-- Tax Estimate --\n");
@@ -90,7 +90,7 @@ void calculateTax(RecordList *list) {
     if (incomeTotal > 0) {
         effectiveTaxRate = (taxOwed / incomeTotal) * 100.0f;
     }
-
+    
     printf("\n-- Tax Estimate --\n");
     printf("Total Income: %.2f\n", incomeTotal);
     printf("Total Expenses: %.2f\n", expenseTotal);
@@ -111,6 +111,10 @@ void calculateTax(RecordList *list) {
     if (deductibleTotal > incomeTotal * 0.90f) {
         printf("Alert: Possible suspicious deduction pattern detected.\n");
     }
+
+    if (incomeTotal > 0 && deductibleTotal > incomeTotal * 0.80f) {
+        printf("Warning: Deductible expenses are very high compared to income.\n");
+    }   
 
     FILE *report = fopen("tax_report.txt", "w");
 
