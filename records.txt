@@ -1,3 +1,0 @@
-Income Salary 50000.00
-Income Salary 250000.00
-Expense Food 250.00

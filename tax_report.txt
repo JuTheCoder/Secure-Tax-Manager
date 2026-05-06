@@ -1,8 +1,0 @@
--- Tax Report --
-Total Income: 300000.00
-Total Expenses: 250.00
-Deductible Expenses: 0.00
-Deductible Expense Percentage: 0.00%
-Taxable Income: 300000.00
-Estimated Tax Owed: 61800.00
-Effective Tax Rate: 20.60%
