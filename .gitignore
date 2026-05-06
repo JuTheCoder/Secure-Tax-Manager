@@ -1,0 +1,18 @@
+# Compiled executable
+tax
+
+# macOS files
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# Generated text files
+records.txt
+tax_report.txt
+
+# Object files
+*.o
+
+# ZIP files
+*.zip
